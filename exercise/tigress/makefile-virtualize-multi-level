@@ -1,0 +1,34 @@
+all: v_2.c v_3.c
+executables: v_2 v_3
+
+v_2.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=indirect \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_2.c fib.c
+
+# Three level dispatching is too slow. Not practical.
+v_3.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=indirect \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=interpolation \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_3.c fib.c
+
+v_2: gen/v_2.c
+	gcc -o gen/$@ $<
+
+v_3: gen/v_3.c
+	gcc -o gen/$@ $<
+
+run: v_2 v_3
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_2 100000
+	@echo
+	#time -f "\t%E real,\t%U user,\t%S sys" gen/v_3 100
+	#@echo

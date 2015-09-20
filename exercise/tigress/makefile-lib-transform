@@ -1,0 +1,34 @@
+all: trans_entropy.c trans_entropy_no_cleanup.c trans_opaque.c
+executable: trans_entropy trans_entropy_no_cleanup trans_opaque
+
+trans_entropy.c: fib.c
+	tigress --Transform=InitEntropy --Functions=main \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/trans_entropy.c fib.c
+
+trans_entropy_no_cleanup.c: fib.c
+	tigress --Transform=InitEntropy --Functions=main \
+		--out=gen/trans_entropy_no_cleanup.c fib.c
+
+trans_opaque.c: fib.c
+	tigress --Transform=InitOpaque --Functions=main --InitOpaqueCount=2 --InitOpaqueStructs=list,array \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/trans_opaque.c fib.c
+
+trans_entropy: gen/trans_entropy.c
+	gcc -o gen/trans_entropy gen/trans_entropy.c
+
+trans_entropy_no_cleanup: gen/trans_entropy_no_cleanup.c
+	gcc -o gen/trans_entropy_no_cleanup gen/trans_entropy_no_cleanup.c
+
+trans_opaque: gen/trans_opaque.c
+	gcc -o gen/trans_opaque gen/trans_opaque.c
+
+run: trans_entropy trans_entropy_no_cleanup trans_opaque
+	@echo
+	time gen/trans_entropy 1000
+	@echo
+	time gen/trans_entropy_no_cleanup 1000
+	@echo
+	time gen/trans_opaque 1000
+	@echo

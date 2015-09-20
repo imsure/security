@@ -1,0 +1,111 @@
+all: v_switch.c v_ifnest.c v_direct.c v_indirect.c v_call.c v_linear.c v_binary.c v_ip.c v_ifnest_ifnest.c
+executables: v_switch v_ifnest v_direct v_indirect v_call v_linear v_binary v_ip v_ifnest_ifnest
+
+v_switch.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_switch.c fib.c
+
+v_ifnest.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=ifnest \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_ifnest.c fib.c
+
+v_direct.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=direct \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_direct.c fib.c
+
+v_indirect.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=indirect \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_indirect.c fib.c
+
+v_call.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=call \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_call.c fib.c
+
+v_linear.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=linear \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_linear.c fib.c
+
+v_binary.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=binary \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_binary.c fib.c
+
+v_ip.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=interpolation \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_ip.c fib.c
+
+v_ifnest_ifnest.c: fib.c
+	tigress --FilePrefix=x --FilePrefix=v1 \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=ifnest \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_ifnest_1.c fib.c
+
+	tigress --FilePrefix=x --FilePrefix=v2 \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=ifnest \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_ifnest_ifnest.c gen/v_ifnest_1.c
+
+v_switch: gen/v_switch.c
+	gcc -o gen/$@ $<
+
+v_ifnest: gen/v_ifnest.c
+	gcc -o gen/$@ $<
+
+v_direct: gen/v_direct.c
+	gcc -o gen/$@ $<
+
+v_indirect: gen/v_indirect.c
+	gcc -o gen/$@ $<
+
+v_call: gen/v_call.c
+	gcc -o gen/$@ $<
+
+v_linear: gen/v_linear.c
+	gcc -o gen/$@ $<
+
+v_binary: gen/v_binary.c
+	gcc -o gen/$@ $<
+
+v_ip: gen/v_ip.c
+	gcc -o gen/$@ $<
+
+v_ifnest_ifnest: gen/v_ifnest_ifnest.c
+	gcc -o gen/$@ $<
+
+run: v_switch v_ifnest v_direct v_indirect v_call v_linear v_binary v_ip v_ifnest_ifnest
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_switch 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_ifnest 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_direct 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_indirect 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_call 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_linear 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_binary 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_ip 100000
+	@echo
+	time  -f "\t%E real,\t%U user,\t%S sys" gen/v_ifnest_ifnest 100000
+	@echo

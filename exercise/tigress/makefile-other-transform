@@ -1,0 +1,67 @@
+all: trans_arith.c trans_split.c trans_flatten.c trans_flatten_flatten.c trans_encode.c
+executable: trans_arith trans_split trans_flatten trans_flatten_flatten trans_encode
+
+# arithmetic transform
+trans_arith.c: fib.c
+	tigress --Transform=EncodeArithmetic --Functions=fib \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/$@ $<
+
+# split
+trans_split.c: fib.c
+	tigress --Transform=Split --Seed=0 --SplitKinds=deep,block,top \
+		--SplitCount=100 --Functions=fib \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/$@ $<
+
+# flatten
+trans_flatten.c: fib.c
+	tigress --Transform=Flatten --Functions=fib \
+		--FlattenDispatch=goto \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/$@ $<
+
+# double flatten
+trans_flatten_flatten.c: fib.c
+	tigress --Transform=Flatten --Functions=fib --FlattenDispatch=goto \
+		--Transform=Flatten --Functions=fib --FlattenDispatch=indirect \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/$@ $<
+
+# encode string literals
+trans_encode.c: fib.c
+	tigress --Transform=EncodeLiterals \
+		--EncodeLiteralsKinds=string \
+		--EncodeLiteralsEncoderName=STRINGS \
+		--Functions=main \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/$@ $<
+
+trans_arith: gen/trans_arith.c
+	gcc -o gen/$@ $<
+
+trans_split: gen/trans_split.c
+	gcc -o gen/$@ $<
+
+trans_flatten: gen/trans_flatten.c
+	gcc -o gen/$@ $<
+
+trans_flatten_flatten: gen/trans_flatten_flatten.c
+	gcc -o gen/$@ $<
+
+trans_encode: gen/trans_encode.c
+	gcc -o gen/$@ $<
+
+run: trans_arith trans_split trans_flatten trans_flatten_flatten trans_encode
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/trans_arith 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/trans_split 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/trans_flatten 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/trans_flatten_flatten 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/trans_encode 100000
+	@echo
+

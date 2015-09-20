@@ -1,0 +1,115 @@
+all: v_mix1.c v_mix2.c v_mix3.c v_mix4.c v_mix5.c v_mix6.c v_mix7.c
+executables: v_mix1 v_mix2 v_mix3 v_mix4 v_mix5 v_mix6 v_mix
+
+# mixed register and stack arguments, 
+# and at most two instruction variants of each kind.
+v_mix1.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--VirtualizeMaxDuplicateOps=2 --VirtualizeOperands=* \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_mix1.c fib.c
+
+# superoperators of length no more than 10
+v_mix2.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--VirtualizeSuperOpsRatio=2.0 --VirtualizeMaxMergeLength=10 \
+		--VirtualizeOptimizeBody=true \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_mix2.c fib.c
+
+# mix above two
+v_mix3.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--VirtualizeMaxDuplicateOps=2 --VirtualizeOperands=* \
+		--VirtualizeSuperOpsRatio=2.0 --VirtualizeMaxMergeLength=10 \
+		--VirtualizeOptimizeBody=true \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_mix3.c fib.c
+
+# add entropy and opaque
+v_mix4.c: fib.c
+	tigress --Transform=InitEntropy --Functions=main \
+		--Transform=InitOpaque --Functions=main \
+		--InitOpaqueCount=2 --InitOpaqueStructs=list,array \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--VirtualizeMaxDuplicateOps=2 --VirtualizeOperands=* \
+		--VirtualizeSuperOpsRatio=2.0 --VirtualizeMaxMergeLength=10 \
+		--VirtualizeOptimizeBody=true \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_mix4.c fib.c
+
+# add entropy and opaque & 2 level dispatch
+v_mix5.c: fib.c
+	tigress --Transform=InitEntropy --Functions=main \
+		--Transform=InitOpaque --Functions=main \
+		--InitOpaqueCount=2 --InitOpaqueStructs=list,array \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=switch \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=call \
+		--VirtualizeMaxDuplicateOps=2 --VirtualizeOperands=* \
+		--VirtualizeSuperOpsRatio=2.0 --VirtualizeMaxMergeLength=10 \
+		--VirtualizeOptimizeBody=true \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_mix5.c fib.c
+
+# Virtualize fib using an interpolation dispatch, running a bogus loop in parallel
+v_mix6.c: fib.c
+	tigress --Transform=InitEntropy --Functions=main \
+		--Transform=UpdateEntropy --Functions=fib --UpdateEntropyVar=n \
+		--Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=interpolation \
+		--VirtualizeBogusLoopIterations=10 --VirtualizeBogusLoopKinds=trivial \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_mix6.c fib.c
+
+# Virtualize fib using an ifnest dispatch, and make it reentrant
+v_mix7.c: fib.c
+	tigress --Transform=Virtualize --Functions=fib \
+		--VirtualizeDispatch=ifnest \
+		--VirtualizeSuperOpsRatio=2.0 --VirtualizeMaxMergeLength=20 \
+		--VirtualizeReentrant=true \
+		--Transform=CleanUp --CleanUpKinds=annotations \
+		--out=gen/v_mix7.c fib.c
+
+v_mix1: gen/v_mix1.c
+	gcc -o gen/$@ $<
+
+v_mix2: gen/v_mix2.c
+	gcc -o gen/$@ $<
+
+v_mix3: gen/v_mix3.c
+	gcc -o gen/$@ $<
+
+v_mix4: gen/v_mix4.c
+	gcc -o gen/$@ $<
+
+v_mix5: gen/v_mix5.c
+	gcc -o gen/$@ $<
+
+v_mix6: gen/v_mix6.c
+	gcc -o gen/$@ $<
+
+v_mix7: gen/v_mix7.c
+	gcc -o gen/$@ $<
+
+run: v_mix1 v_mix2 v_mix3 v_mix4 v_mix5 v_mix6 v_mix7
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_mix1 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_mix2 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_mix3 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_mix4 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_mix5 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_mix6 100000
+	@echo
+	time -f "\t%E real,\t%U user,\t%S sys" gen/v_mix7 100000
+	@echo
